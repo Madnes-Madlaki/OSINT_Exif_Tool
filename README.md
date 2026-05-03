@@ -19,13 +19,14 @@ takes an image you provide and extracts the metadata it contains, saves it into 
 ## Pre-Requisites : 
 Python 3.7 + 
 pip commands 
+internet connection
 
 ## Installation :
 git clone https://github.com/Madnes-Madlaki/OSINT_Exif_Tool
 
 cd OSINT_Exif_Tool
 
-pip install flask exif
+pip install flask exif requests
 
 python ui.py
 

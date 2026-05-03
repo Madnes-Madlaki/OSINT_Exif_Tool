@@ -100,18 +100,19 @@
             color: #333;
             word-break: break-word;
         }
+        .value a {
+            color: #667eea;
+            text-decoration: underline;
+        }
+        .value a:hover {
+            color: #5a67d8;
+        }
         .error {
             background: #fee;
             color: #c33;
             padding: 10px;
             border-radius: 5px;
             margin: 10px 0;
-        }
-        .link {
-            display: inline-block;
-            margin-top: 15px;
-            color: #667eea;
-            text-decoration: none;
         }
     </style>
 </head>
@@ -142,7 +143,6 @@
         <div class="results" id="results">
             <h3>📋 Extracted Metadata</h3>
             <div class="metadata-box" id="metadataList"></div>
-            <div id="gpsLink"></div>
         </div>
     </div>
     
@@ -170,7 +170,7 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    displayMetadata(data.metadata, data.google_link);
+                    displayMetadata(data.metadata);
                     document.getElementById('results').style.display = 'block';
                 } else {
                     alert('Error: ' + data.error);
@@ -182,7 +182,7 @@
             }
         }
         
-        function displayMetadata(metadata, googleLink) {
+        function displayMetadata(metadata) {
             const container = document.getElementById('metadataList');
             container.innerHTML = '';
             
@@ -190,19 +190,19 @@
             for (const [key, value] of Object.entries(metadata)) {
                 const item = document.createElement('div');
                 item.className = 'metadata-item';
+                
+                let displayValue = escapeHtml(String(value).substring(0, 200));
+                
+                // Check if this is the Google Maps link field and make it clickable
+                if (key === 'google_mapsLink' && value && value.includes('http')) {
+                    displayValue = `<a href="${value}" target="_blank">${value}</a>`;
+                }
+                
                 item.innerHTML = `
                     <span class="key">${formatKey(key)}:</span>
-                    <span class="value">${escapeHtml(String(value).substring(0, 200))}</span>
+                    <span class="value">${displayValue}</span>
                 `;
                 container.appendChild(item);
-            }
-            
-            // Add Google Maps link if GPS data exists
-            if (googleLink) {
-                const linkDiv = document.getElementById('gpsLink');
-                linkDiv.innerHTML = `<a href="${googleLink}" target="_blank" class="link">📍 View on Google Maps</a>`;
-            } else {
-                document.getElementById('gpsLink').innerHTML = '';
             }
         }
         

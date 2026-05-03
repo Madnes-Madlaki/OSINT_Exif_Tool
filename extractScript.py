@@ -43,8 +43,9 @@ def extractionFunc(imagePath):
 
                     latitude_decimal = gpsMetadata_intoDecimal(latitude_degrees, latitude_minutes, latitude_secondes, latitude_ref)
                     longitude_decimal = gpsMetadata_intoDecimal(longitude_degrees, longitude_minutes, longitude_secondes, longitude_ref)
-
-                    link = f"Google Maps : https://www.google.com/maps?q={latitude_decimal},{longitude_decimal}"
+                    latitude_decimal = round(latitude_decimal, 6)
+                    longitude_decimal = round(longitude_decimal, 6)
+                    link = f"https://www.google.com/maps?q={latitude_decimal},{longitude_decimal}"
 
                     metadata_dictionary['google_mapsLink'] = link
 

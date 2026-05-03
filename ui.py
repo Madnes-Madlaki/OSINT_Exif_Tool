@@ -50,9 +50,8 @@ def uploadFile():
         return jsonify({
             'success': True,
             'metadata': metadata_dictionary,
-            'googleMapsLink': googleMapsLink if googleMapsLink 
-                                        else None
-            })
+            'googleMapsLink': googleMapsLink if googleMapsLink else None 
+              })
         
     except Exception as e:
         if os.path.exists(filepath):  

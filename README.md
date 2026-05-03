@@ -22,8 +22,11 @@ pip commands
 
 ## Installation :
 git clone https://github.com/Madnes-Madlaki/OSINT_Exif_Tool
+
 cd OSINT_Exif_Tool
+
 pip install flask exif
+
 python ui.py
 
 then just ctrl+right_click the local host

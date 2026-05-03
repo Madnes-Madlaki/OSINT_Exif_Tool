@@ -77,16 +77,16 @@ if __name__ == "__main__":
         sys.exit(404)
 
 
-imagePath = sys.argv[1]
-#argv[0] is the name of the script, argv[1] is the path of the image
-print("*"*50)
-print("wait for extraction\n")
-print(f"analyzing path : {imagePath}\n")
-print("*"*50)
-link = extractionFunc(imagePath)
-print("\n" + "*"*50)
-print(f"{link}")
-print("*"*50)
+    imagePath = sys.argv[1]
+    #argv[0] is the name of the script, argv[1] is the path of the image
+    print("*"*50)
+    print("wait for extraction\n")
+    print(f"analyzing path : {imagePath}\n")
+    print("*"*50)
+    link = extractionFunc(imagePath)
+    print("\n" + "*"*50)
+    print(f"{link}")
+    print("*"*50)
 
 
 

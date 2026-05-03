@@ -38,20 +38,28 @@ def uploadFile():
 
     try:
         googleMapsLink = extractionFunc(filepath)  
+        
+        # Read the JSON file FIRST
         report_files = [f for f in os.listdir('.') if f.startswith('metadata_') and f.endswith('.json')]
         #takes the json file the function creates, see extractScript.py and reads it, takes only files starting with metadata_ and ending in json extension
         if report_files:
             lastReport = max(report_files, key = os.path.getctime)
-            #compares creation tiem
+            #compares creation time
             with open(lastReport, 'r') as filevariable:
-                metadata_dictionary = json.load(filevariable) 
+                metadata_dictionary = json.load(filevariable)
+        
+        
+        geocoding_data = {}
+        if metadata_dictionary.get('geoCoded_Address'):
+            geocoding_data['address'] = metadata_dictionary['geoCoded_Address']
         
         os.remove(filepath)  
         return jsonify({
             'success': True,
             'metadata': metadata_dictionary,
-            'googleMapsLink': googleMapsLink if googleMapsLink else None 
-              })
+            'googleMapsLink': googleMapsLink if googleMapsLink else None,
+            'geocoding': geocoding_data
+        })
         
     except Exception as e:
         if os.path.exists(filepath):  

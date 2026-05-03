@@ -2,6 +2,7 @@ from exif import Image
 import sys
 import json
 import datetime
+import requests
 
 metadata_dictionary = {}
 
@@ -48,6 +49,11 @@ def extractionFunc(imagePath):
                     link = f"https://www.google.com/maps?q={latitude_decimal},{longitude_decimal}"
 
                     metadata_dictionary['google_mapsLink'] = link
+                    metadata_dictionary['gps_longitude_decimal'] = longitude_decimal  
+                    metadata_dictionary['gps_latitude_decimal'] = latitude_decimal    
+
+                    geoCodedAddress = adressGeocoding(latitude_decimal, longitude_decimal)
+                    metadata_dictionary['geoCoded_Address'] = geoCodedAddress
 
                 else: print("no gps data found")
 
@@ -70,6 +76,30 @@ def gpsMetadata_intoDecimal(degrees, minutes, seconds, ref):
         decimal = -decimal
     return decimal
     #the exif library gives the coordinates in DMS format, we need to handle this within the function
+
+def adressGeocoding(latitude, longitude):
+    #we'll just take the coords the gps function gives us and convert it into a readable address
+    try:
+        link2 = f"https://nominatim.openstreetmap.org/reverse?lat={latitude}&lon={longitude}&format=json&zoom=18"
+        response = requests.get(link2, headers={'User-Agent': 'OSINT_Metadata_Tool/1.0'}, timeout=5)
+        #get the request to the link2, timeout after 5s if no response
+        if response.status_code == 200:
+            outputed_data = response.json()
+            #get only the address, if no address return address not found
+            return outputed_data.get('display_name', 'address not found')
+
+        else: 
+            return 'addressGeocoding not working'
+
+    except requests.exceptions.Timeout:
+        return 'Too much latency, try later'
+    except requests.exceptions.ConnectionError:  
+        return 'No internet connection, try later' 
+        
+    except Exception as error:  
+        #:50 to avoid way too long error messages
+        return f'Geocoding failed: {str(error)[:50]}'  
+
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:

@@ -4,7 +4,7 @@
 <!--Nothing to see here, just vibecoded UI, dont waste your tome reviewing this code-->
 <!--Nothing to see here, just vibecoded UI, dont waste your tome reviewing this code-->
 
-<!-- templates/index.html - Minimal web interface -->
+<!-- templates/index.html - OSINT Metadata Tool with Geocoding -->
 <!DOCTYPE html>
 <html>
 <head>
@@ -14,7 +14,7 @@
         /* Simple styling - just to make it look clean */
         body {
             font-family: Arial, sans-serif;
-            max-width: 800px;
+            max-width: 1200px;
             margin: 50px auto;
             padding: 20px;
             background: #f5f5f5;
@@ -28,6 +28,11 @@
         h1 {
             color: #333;
             text-align: center;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
         }
         .upload-area {
             border: 2px dashed #ccc;
@@ -78,35 +83,108 @@
             display: none;
             margin-top: 30px;
         }
-        .metadata-box {
+        
+        /* Two column layout */
+        .two-columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .column {
             background: #f9f9f9;
-            padding: 15px;
-            border-radius: 5px;
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .column h3 {
+            margin-top: 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+            color: #333;
+        }
+        
+        .column h3 span {
+            font-size: 14px;
+            font-weight: normal;
+            color: #666;
+            margin-left: 10px;
+        }
+        
+        .metadata-box {
             max-height: 500px;
             overflow-y: auto;
         }
+        
         .metadata-item {
             padding: 8px;
             border-bottom: 1px solid #ddd;
-            font-size: 14px;
+            font-size: 13px;
         }
+        
         .key {
             font-weight: bold;
             color: #667eea;
             display: inline-block;
             width: 180px;
         }
+        
         .value {
             color: #333;
             word-break: break-word;
         }
-        .value a {
+        
+        /* Enriched data styling */
+        .enriched-item {
+            padding: 12px;
+            margin: 10px 0;
+            background: white;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .enriched-label {
+            font-weight: bold;
+            color: #667eea;
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        
+        .enriched-value {
+            color: #333;
+            font-size: 14px;
+        }
+        
+        .map-link {
+            display: inline-block;
+            margin-top: 10px;
             color: #667eea;
             text-decoration: underline;
+            font-weight: bold;
         }
-        .value a:hover {
+        
+        .map-link:hover {
             color: #5a67d8;
         }
+        
+        .address-box {
+            background: #e8f0fe;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        
+        .coordinates {
+            font-family: monospace;
+            font-size: 14px;
+            background: #f0f0f0;
+            padding: 8px;
+            border-radius: 5px;
+            margin: 5px 0;
+        }
+        
         .error {
             background: #fee;
             color: #c33;
@@ -114,12 +192,18 @@
             border-radius: 5px;
             margin: 10px 0;
         }
+        
+        @media (max-width: 768px) {
+            .two-columns {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1> OSINT Metadata Extractor</h1>
-        <p style="text-align: center; color: #666;">Upload an image to extract hidden metadata (EXIF, GPS, camera info)</p>
+        <p class="subtitle">Extract EXIF data + GPS + Reverse Geocoding</p>
         
         <!-- Upload area -->
         <div class="upload-area" onclick="document.getElementById('fileInput').click()">
@@ -139,10 +223,21 @@
             <p>Analyzing image metadata...</p>
         </div>
         
-        <!-- Results section -->
+        <!-- Results section - Two columns -->
         <div class="results" id="results">
-            <h3>📋 Extracted Metadata</h3>
-            <div class="metadata-box" id="metadataList"></div>
+            <div class="two-columns">
+                <!-- LEFT COLUMN: Raw EXIF Metadata -->
+                <div class="column">
+                    <h3> Raw EXIF Metadata <span></span></h3>
+                    <div class="metadata-box" id="exifMetadataList"></div>
+                </div>
+                
+                <!-- RIGHT COLUMN: OSINT Enriched Data -->
+                <div class="column">
+                    <h3> OSINT Enriched Data <span></span></h3>
+                    <div id="enrichedData"></div>
+                </div>
+            </div>
         </div>
     </div>
     
@@ -170,7 +265,7 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    displayMetadata(data.metadata);
+                    displayResults(data.metadata, data.googleMapsLink, data.geocoding);
                     document.getElementById('results').style.display = 'block';
                 } else {
                     alert('Error: ' + data.error);
@@ -182,27 +277,99 @@
             }
         }
         
-        function displayMetadata(metadata) {
-            const container = document.getElementById('metadataList');
-            container.innerHTML = '';
+        function displayResults(metadata, googleLink, geocodingData) {
+            // LEFT COLUMN: Show ONLY raw EXIF metadata (original fields)
+            const exifContainer = document.getElementById('exifMetadataList');
+            exifContainer.innerHTML = '';
             
-            // Display each metadata field
+            // Fields that are OSINT-enriched (not raw EXIF)
+            const enrichedFields = ['google_mapsLink', 'gps_latitude_decimal', 'gps_longitude_decimal', 'file_hash_md5', 'file_hash_sha256', 'file_size', 'analysis_timestamp'];
+            
             for (const [key, value] of Object.entries(metadata)) {
+                // Skip enriched fields - they go to right column
+                if (enrichedFields.includes(key)) continue;
+                
                 const item = document.createElement('div');
                 item.className = 'metadata-item';
-                
-                let displayValue = escapeHtml(String(value).substring(0, 200));
-                
-                // Check if this is the Google Maps link field and make it clickable
-                if (key === 'google_mapsLink' && value && value.includes('http')) {
-                    displayValue = `<a href="${value}" target="_blank">${value}</a>`;
-                }
-                
                 item.innerHTML = `
                     <span class="key">${formatKey(key)}:</span>
-                    <span class="value">${displayValue}</span>
+                    <span class="value">${escapeHtml(String(value).substring(0, 200))}</span>
                 `;
-                container.appendChild(item);
+                exifContainer.appendChild(item);
+            }
+            
+            // RIGHT COLUMN: OSINT Enriched Data
+            const enrichedContainer = document.getElementById('enrichedData');
+            enrichedContainer.innerHTML = '';
+            
+            // Check if GPS data exists
+            const hasGps = metadata.gps_latitude_decimal && metadata.gps_longitude_decimal;
+            
+            if (hasGps) {
+                const lat = metadata.gps_latitude_decimal;
+                const lon = metadata.gps_longitude_decimal;
+                
+                // GPS Coordinates section
+                const gpsSection = document.createElement('div');
+                gpsSection.className = 'enriched-item';
+                gpsSection.innerHTML = `
+                    <div class="enriched-label"> GPS Coordinates</div>
+                    <div class="coordinates">Latitude: ${lat}</div>
+                    <div class="coordinates">Longitude: ${lon}</div>
+                `;
+                enrichedContainer.appendChild(gpsSection);
+                
+                // Google Maps Link section
+                if (googleLink) {
+                    const mapSection = document.createElement('div');
+                    mapSection.className = 'enriched-item';
+                    mapSection.innerHTML = `
+                        <div class="enriched-label">Google Maps</div>
+                        <a href="${googleLink}" target="_blank" class="map-link"> Open in Google Maps</a>
+                        <div class="coordinates" style="font-size: 11px; margin-top: 8px;">${googleLink}</div>
+                    `;
+                    enrichedContainer.appendChild(mapSection);
+                }
+                
+                // Reverse Geocoding section (Address)
+                if (geocodingData && geocodingData.address) {
+                    const addressSection = document.createElement('div');
+                    addressSection.className = 'enriched-item';
+                    addressSection.innerHTML = `
+                        <div class="enriched-label"> Reverse Geocoded Address</div>
+                        <div class="address-box">${escapeHtml(geocodingData.address)}</div>
+                    `;
+                    enrichedContainer.appendChild(addressSection);
+                } else if (geocodingData && geocodingData.error) {
+                    const errorSection = document.createElement('div');
+                    errorSection.className = 'enriched-item';
+                    errorSection.innerHTML = `
+                        <div class="enriched-label">⚠️ Geocoding</div>
+                        <div class="error" style="margin:0">${geocodingData.error}</div>
+                    `;
+                    enrichedContainer.appendChild(errorSection);
+                }
+            } else {
+                const noGpsSection = document.createElement('div');
+                noGpsSection.className = 'enriched-item';
+                noGpsSection.innerHTML = `
+                    <div class="enriched-label"> No GPS Data</div>
+                    <div class="enriched-value">This image does not contain GPS coordinates.</div>
+                `;
+                enrichedContainer.appendChild(noGpsSection);
+            }
+            
+            // File Forensics section
+            if (metadata.file_size || metadata.file_hash_md5) {
+                const forensicsSection = document.createElement('div');
+                forensicsSection.className = 'enriched-item';
+                let forensicsHtml = '<div class="enriched-label">🔒 File Forensics</div>';
+                if (metadata.file_size) forensicsHtml += `<div class="enriched-value">📦 Size: ${formatFileSize(metadata.file_size)}</div>`;
+                if (metadata.file_hash_md5) forensicsHtml += `<div class="enriched-value" style="font-size: 11px; font-family: monospace;">🔑 MD5: ${metadata.file_hash_md5}</div>`;
+                if (metadata.file_hash_sha256) forensicsHtml += `<div class="enriched-value" style="font-size: 11px; font-family: monospace;">🔑 SHA256: ${metadata.file_hash_sha256}</div>`;
+                if (metadata.analysis_timestamp) forensicsHtml += `<div class="enriched-value" style="font-size: 11px; color: #888;">⏱️ Analyzed: ${new Date(metadata.analysis_timestamp).toLocaleString()}</div>`;
+                forensicsSection.innerHTML = forensicsHtml;
+                enrichedContainer.appendChild(forensicsSection);
             }
         }
         
@@ -213,8 +380,14 @@
             ).join(' ');
         }
         
+        function formatFileSize(bytes) {
+            if (!bytes) return 'Unknown';
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(1024));
+            return Math.round(bytes / Math.pow(1024, i)) + ' ' + sizes[i];
+        }
+        
         function escapeHtml(text) {
-            // Prevent XSS attacks
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
